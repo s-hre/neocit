@@ -1,21 +1,35 @@
 import { WebSocketServer } from 'ws';
-const wss = new WebSocketServer({ port: 8080 });
+import express from 'express';
+import http from 'http';
 
-console.log('🌐 Announcement WebSocket running on ws://localhost:8080');
+// Express app for Render’s HTTP health checks
+const app = express();
+const server = http.createServer(app);
+const PORT = process.env.PORT || 8080;
+
+const wss = new WebSocketServer({ server });
+
+app.get('/', (req, res) => {
+  res.send('✅ Announcement WebSocket server is running.');
+});
 
 wss.on('connection', ws => {
-  console.log('Client connected');
+  console.log('✅ Client connected');
 
-  ws.on('message', message => {
-    console.log('Received:', message.toString());
+  ws.on('message', msg => {
+    console.log('📢 Announcement:', msg.toString());
 
-    // Broadcast message to everyone
-    for (const client of wss.clients) {
+    // Broadcast to all clients
+    wss.clients.forEach(client => {
       if (client.readyState === ws.OPEN) {
-        client.send(message.toString());
+        client.send(msg.toString());
       }
-    }
+    });
   });
 
-  ws.on('close', () => console.log('Client disconnected'));
+  ws.on('close', () => console.log('❌ Client disconnected'));
+});
+
+server.listen(PORT, () => {
+  console.log(`🌐 Server running on port ${PORT}`);
 });
